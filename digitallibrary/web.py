@@ -4,6 +4,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -160,29 +161,74 @@ def app_erstellen(
     def start() -> RedirectResponse:
         return RedirectResponse("/buecher", status_code=303)
 
+    def sortierungen(tab: str) -> dict[str, str]:
+        if tab == "spiele":
+            return bib.SORTIERUNGEN
+        return {k: v for k, v in bib.SORTIERUNGEN.items() if k in ("status", "titel")}
+
     def liste(
-        request: Request, s: Session, tab: str, status: str | None, *, meldung: str = "", fehler: str = ""
+        request: Request,
+        s: Session,
+        tab: str,
+        status: str | None,
+        sortierung: str | None = None,
+        *,
+        meldung: str = "",
+        fehler: str = "",
     ) -> HTMLResponse:
         klasse = TABS[tab]
         filter_status = Status(status) if status in {st.value for st in Status} else None
+        sortierung = sortierung if sortierung in sortierungen(tab) else "status"
         anzahl = bib.anzahl_je_status(s, klasse)
         return templates.TemplateResponse(
             request,
             "liste.html",
             {
                 "tab": tab,
-                "medien": bib.medien_liste(s, klasse, filter_status),
+                "medien": bib.medien_liste(s, klasse, filter_status, sortierung),
                 "anzahl": anzahl,
                 "gesamt": sum(anzahl.values()),
                 "status_filter": filter_status,
+                "sortierung": sortierung,
+                "sortierungen": sortierungen(tab),
                 "meldung": meldung,
                 "fehler": fehler,
             },
         )
 
+    def tab_url(tab: str, status: str | None, sortierung: str | None, **extra: object) -> str:
+        params = {"status": status, "sort": sortierung, **extra}
+        query = urlencode({k: v for k, v in params.items() if v not in (None, "", "status")})
+        return f"/{tab}" + (f"?{query}" if query else "")
+
+    def geaendert_meldung(request: Request) -> str:
+        anzahl = request.query_params.get("geaendert", "")
+        if not anzahl.isdigit():
+            return ""
+        return "Keine Änderung." if anzahl == "0" else f"Status bei {anzahl} Einträgen geändert."
+
     @app.get("/spiele", response_class=HTMLResponse)
-    def spiele(request: Request, s: Sitzung, status: str | None = None) -> HTMLResponse:
-        return liste(request, s, "spiele", status)
+    def spiele(request: Request, s: Sitzung, status: str | None = None, sort: str | None = None) -> HTMLResponse:
+        return liste(request, s, "spiele", status, sort, meldung=geaendert_meldung(request))
+
+    @app.post("/medien/status")
+    def status_mehrere(
+        s: Sitzung,
+        neuer_status: Annotated[str, Form()],
+        tab: Annotated[str, Form()],
+        ids: Annotated[list[int] | None, Form()] = None,
+        filter_status: Annotated[str, Form()] = "",
+        sortierung: Annotated[str, Form()] = "",
+    ) -> RedirectResponse:
+        if tab not in TABS:
+            raise HTTPException(422, "Unbekannter Bereich")
+        try:
+            status = _status(neuer_status)
+        except bib.Eingabefehler as fehler:
+            raise HTTPException(422, str(fehler)) from None
+        anzahl = bib.status_mehrere(s, ids or [], status)
+        s.commit()
+        return RedirectResponse(tab_url(tab, filter_status, sortierung, geaendert=anzahl), status_code=303)
 
     @app.post("/spiele/steam-import", response_class=HTMLResponse)
     def steam_import(request: Request, s: Sitzung) -> HTMLResponse:
@@ -205,8 +251,8 @@ def app_erstellen(
         ))  # fmt: skip
 
     @app.get("/buecher", response_class=HTMLResponse)
-    def buecher(request: Request, s: Sitzung, status: str | None = None) -> HTMLResponse:
-        return liste(request, s, "buecher", status)
+    def buecher(request: Request, s: Sitzung, status: str | None = None, sort: str | None = None) -> HTMLResponse:
+        return liste(request, s, "buecher", status, sort, meldung=geaendert_meldung(request))
 
     # --- Buch hinzufügen ---
 

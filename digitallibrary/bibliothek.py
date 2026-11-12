@@ -37,12 +37,38 @@ def _status_sortierung():
     return case({s.value: i for i, s in enumerate(STATUS_REIHENFOLGE)}, value=Medium.status)
 
 
-def medien_liste(sitzung: Session, klasse: type[Medium], status: Status | None = None) -> list[Medium]:
+SORTIERUNGEN = {"status": "Status", "titel": "Titel", "spielzeit": "Spielzeit", "zuletzt": "Zuletzt gespielt"}
+
+
+def medien_liste(
+    sitzung: Session, klasse: type[Medium], status: Status | None = None, sortierung: str = "status"
+) -> list[Medium]:
     abfrage = select(klasse)
     if status is not None:
         abfrage = abfrage.where(klasse.status == status)
-    abfrage = abfrage.order_by(_status_sortierung(), func.lower(klasse.titel))
+    titel = func.lower(klasse.titel)
+    if sortierung == "titel":
+        abfrage = abfrage.order_by(titel)
+    elif sortierung == "spielzeit" and issubclass(klasse, Spiel):
+        abfrage = abfrage.order_by(Spiel.spielzeit_min.desc(), titel)
+    elif sortierung == "zuletzt" and issubclass(klasse, Spiel):
+        abfrage = abfrage.order_by(Spiel.zuletzt_gespielt.desc().nulls_last(), titel)
+    else:
+        abfrage = abfrage.order_by(_status_sortierung(), titel)
     return list(sitzung.scalars(abfrage))
+
+
+def status_mehrere(sitzung: Session, ids: list[int], status: Status, heute: dt.date | None = None) -> int:
+    """Setzt den Status für mehrere Medien auf einmal. Gibt die Anzahl der geänderten zurück."""
+    if not ids:
+        return 0
+    geaendert = 0
+    for medium in sitzung.scalars(select(Medium).where(Medium.id.in_(ids))):
+        if medium.status != status:
+            status_setzen(medium, status, heute)
+            geaendert += 1
+    sitzung.flush()
+    return geaendert
 
 
 def anzahl_je_status(sitzung: Session, klasse: type[Medium]) -> dict[Status, int]:

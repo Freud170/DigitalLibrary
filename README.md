@@ -13,7 +13,9 @@ Nächstes?“ schneller beantwortet ist. Läuft lokal im Browser.
   Neue Spiele landen im Backlog, in den letzten 2 Wochen gespielte auf „Läuft“. Beim erneuten
   Abgleich wird nur die Spielzeit aktualisiert – eigene Änderungen (Titel, Status …) bleiben.
   Voraussetzung: `STEAM_API_KEY` und `STEAM_ID` in der `.env`, Spieldetails im Profil öffentlich.
-- Suchfeld in den Listen.
+- Listen: Suche (Titel/Autor), Sortierung (Status, Titel; bei Spielen auch Spielzeit und
+  zuletzt gespielt) und **Mehrfachauswahl**: Karten anhaken oder „Alle sichtbaren auswählen“,
+  dann unten in der Leiste den Status für alle auf einmal setzen.
 - Geplant: „Was als Nächstes?“-Modus, Spielzeit- und Lese-Verlauf, Jahresstatistik.
 
 ## Einrichten (Windows, PowerShell)

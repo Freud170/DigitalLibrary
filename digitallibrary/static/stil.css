@@ -107,8 +107,25 @@ main { max-width: 1100px; margin: 0 auto; padding: 1rem 16px 3rem; }
 .status-beendet { color: var(--s-beendet); }
 .status-abgebrochen { color: var(--s-abgebrochen); }
 .leer { color: var(--gedaempft); padding: 2rem 0; }
-.suche { margin-bottom: .75rem; max-width: 360px; background: var(--flaeche); }
+.werkzeuge { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-bottom: .75rem; }
+.suche { max-width: 320px; background: var(--flaeche); }
+.sortierung label { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--gedaempft); }
+.sortierung select { width: auto; background: var(--flaeche); }
 .karte[hidden] { display: none; }
+
+/* Mehrfachauswahl */
+.karte { position: relative; }
+.karte .auswahl { position: absolute; top: .6rem; right: .6rem; width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--akzent); }
+.karte-titel { padding-right: 1.6rem; }
+.karte.gewaehlt { border-color: var(--akzent); box-shadow: 0 0 0 1px var(--akzent); }
+.auswahl-leiste {
+  position: sticky; bottom: 1rem; margin-top: 1rem; display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+  padding: .75rem 1rem; background: var(--flaeche); border: 1px solid var(--akzent); border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgb(0 0 0 / .18);
+}
+.auswahl-leiste[hidden] { display: none; }
+.auswahl-leiste label { display: flex; align-items: center; gap: .4rem; font-size: .9rem; }
+.auswahl-leiste select { width: auto; }
 
 /* Formulare */
 .box { background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }

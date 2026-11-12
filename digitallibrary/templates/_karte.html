@@ -1,4 +1,5 @@
 <li class="karte" id="medium-{{ m.id }}">
+  <input type="checkbox" class="auswahl" name="ids" value="{{ m.id }}" form="massen" aria-label="„{{ m.titel }}“ auswählen">
   <a href="/medien/{{ m.id }}" class="cover" tabindex="-1">
     {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="" loading="lazy"
       {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
