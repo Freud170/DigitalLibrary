@@ -1,0 +1,4 @@
+<nav class="ansicht-umschalter" aria-label="Ansicht">
+  <a href="/buecher" class="{{ 'aktiv' if not aktuell.ansicht }}">📚 Regal</a>
+  <a href="/buecher?ansicht=liste" class="{{ 'aktiv' if aktuell.ansicht == 'liste' }}">☰ Liste</a>
+</nav>

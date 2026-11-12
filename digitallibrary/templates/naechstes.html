@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_makros.html" import cover, erfolge %}
 {% block titel %}Was als Nächstes? · DigitalLibrary{% endblock %}
 {% block inhalt %}
 <form method="get" action="/naechstes" class="box auswahl-naechstes">
@@ -24,8 +25,7 @@
     {% for m in ergebnis.weitermachen %}
     <li>
       <a href="/medien/{{ m.id }}" class="mini">
-        {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="" loading="lazy"
-          {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
+        {{ cover(m) }}
         <span><strong>{{ m.titel }}</strong>
           <small>{{ 'Buch' if m.art == 'buch' else 'Spiel' }}{% if m.untertitel %} · {{ m.untertitel }}{% endif %}{% if m.art == 'buch' and m.aktuelle_seite and m.seiten %} · S. {{ m.aktuelle_seite }}/{{ m.seiten }}{% endif %}</small>
         </span>
@@ -43,14 +43,12 @@
   <ul class="vorschlaege">
     {% for m in ergebnis.neu %}
     <li class="vorschlag" id="vorschlag-{{ m.id }}">
-      <a href="/medien/{{ m.id }}" class="vorschlag-cover">
-        {% if m.cover_url %}<img src="{{ m.cover_url }}" alt=""
-          {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
-      </a>
+      <a href="/medien/{{ m.id }}" class="vorschlag-cover">{{ cover(m, lazy=false) }}</a>
       <div class="vorschlag-text">
         <span class="art">{{ 'Buch' if m.art == 'buch' else 'Spiel' }}</span>
         <a href="/medien/{{ m.id }}" class="karte-titel">{{ m.titel }}</a>
         {% if m.untertitel %}<span class="karte-unter">{{ m.untertitel }}</span>{% endif %}
+        {{ erfolge(m) }}
         <div class="karte-meta">
           {% if m.geschaetzte_dauer_min %}<span>≈ {{ m.geschaetzte_dauer_min | stunden }} h</span>{% endif %}
           {% for st in m.stimmungen %}<span class="tag">{{ st.name }}</span>{% endfor %}

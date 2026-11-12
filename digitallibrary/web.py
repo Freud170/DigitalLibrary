@@ -4,7 +4,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -26,7 +26,9 @@ templates = Jinja2Templates(directory=PAKET / "templates")
 templates.env.globals.update(STATUS_REIHENFOLGE=STATUS_REIHENFOLGE, Status=Status)
 
 TABS: dict[str, type[Medium]] = {"spiele": Spiel, "buecher": Buch}
-BUCH_FELDER = ("titel", "isbn", "autoren", "verlag", "jahr", "seiten", "cover_url", "openlibrary_key")
+BUCH_FELDER = (
+    "titel", "isbn", "autoren", "verlag", "jahr", "seiten", "cover_url", "openlibrary_key", "reihe", "reihe_nr"
+)  # fmt: skip
 
 
 def stunden(minuten: int | None) -> str:
@@ -99,6 +101,8 @@ def _buch_eingabe(formular: dict[str, str]) -> bib.BuchEingabe:
         seiten=_zahl(formular["seiten"], "Seiten", 1, 100_000),
         cover_url=_cover_url(formular["cover_url"]),
         openlibrary_key=formular["openlibrary_key"].strip()[:50] or None,
+        reihe=formular.get("reihe", ""),
+        reihe_nr=_zahl(formular.get("reihe_nr", ""), "Band", 0, 10_000),
     )
 
 
@@ -112,6 +116,8 @@ def _formular_aus_daten(daten: openlibrary.BuchDaten) -> dict[str, str]:
         "seiten": str(daten.seiten or ""),
         "cover_url": daten.cover_url or "",
         "openlibrary_key": daten.openlibrary_key or "",
+        "reihe": "",
+        "reihe_nr": "",
     }
 
 
@@ -187,45 +193,69 @@ def app_erstellen(
         return templates.TemplateResponse(request, "_gestartet.html", {"m": medium})
 
     def sortierungen(tab: str) -> dict[str, str]:
-        if tab == "spiele":
-            return bib.SORTIERUNGEN
-        return {k: v for k, v in bib.SORTIERUNGEN.items() if k in ("status", "titel")}
+        return bib.SORTIERUNGEN if tab == "spiele" else bib.BUCH_SORTIERUNGEN
+
+    def tab_url(tab: str, params: dict[str, str | None]) -> str:
+        query = urlencode({k: v for k, v in params.items() if v not in (None, "")})
+        return f"/{tab}" + (f"?{query}" if query else "")
 
     def liste(
-        request: Request,
-        s: Session,
-        tab: str,
-        status: str | None,
-        sortierung: str | None = None,
-        *,
-        meldung: str = "",
-        fehler: str = "",
+        request: Request, s: Session, tab: str, params: dict[str, str], *, meldung: str = "", fehler: str = ""
     ) -> HTMLResponse:
+        """Listen- bzw. Regalansicht. params: status, sort, erfolge (nur Spiele), ansicht (nur Bücher)."""
         klasse = TABS[tab]
-        filter_status = Status(status) if status in {st.value for st in Status} else None
-        sortierung = sortierung if sortierung in sortierungen(tab) else "status"
-        anzahl = bib.anzahl_je_status(s, klasse)
-        return templates.TemplateResponse(
-            request,
-            "liste.html",
-            {
-                "tab": tab,
-                "medien": bib.medien_liste(s, klasse, filter_status, sortierung),
-                "anzahl": anzahl,
-                "gesamt": sum(anzahl.values()),
-                "status_filter": filter_status,
-                "sortierung": sortierung,
-                "sortierungen": sortierungen(tab),
-                "stimmungen": bib.stimmungen_alle(s),
-                "meldung": meldung,
-                "fehler": fehler,
-            },
-        )
+        filter_status = Status(params["status"]) if params.get("status") in {st.value for st in Status} else None
+        regal = tab == "buecher" and params.get("ansicht") != "liste"
+        standard_sort = "autor" if regal else "status"
+        sortierung = params.get("sort") if params.get("sort") in sortierungen(tab) else standard_sort
+        erfolge = params.get("erfolge") if tab == "spiele" and params.get("erfolge") in bib.ERFOLGE_FILTER else None
+        aktuell = {
+            "ansicht": "liste" if tab == "buecher" and not regal else None,
+            "status": None if regal or filter_status is None else filter_status.value,
+            "erfolge": erfolge,
+            "sort": None if sortierung == standard_sort else sortierung,
+        }
 
-    def tab_url(tab: str, status: str | None, sortierung: str | None, **extra: object) -> str:
-        params = {"status": status, "sort": sortierung, **extra}
-        query = urlencode({k: v for k, v in params.items() if v not in (None, "", "status")})
-        return f"/{tab}" + (f"?{query}" if query else "")
+        def link(**aenderungen: str | None) -> str:
+            return tab_url(tab, {**aktuell, **aenderungen})
+
+        kontext: dict[str, object] = {
+            "tab": tab,
+            "link": link,
+            "aktuell": aktuell,
+            "hier": link(),
+            "sortierung": sortierung,
+            "sortierungen": sortierungen(tab),
+            "meldung": meldung,
+            "fehler": fehler,
+        }
+        if tab == "buecher":
+            buecher = bib.buecher_sortiert(s, sortierung)
+            kontext.update(buecher_anzahl=len(buecher), kapazitaet=bib.KAPAZITAET)
+            if regal:
+                kontext.update(regale=bib.regale_fuellen(buecher), plaetze_pro_regal=bib.PLAETZE_PRO_REGAL)
+                return templates.TemplateResponse(request, "regal.html", kontext)
+            medien: list[Medium] = [b for b in buecher if filter_status is None or b.status == filter_status]
+        else:
+            medien = bib.medien_liste(s, klasse, filter_status, sortierung, erfolge)
+            kontext.update(
+                erfolge_filter=erfolge,
+                erfolge_anzahl=bib.anzahl_erfolge(s, filter_status),
+                ERFOLGE_FILTER=bib.ERFOLGE_FILTER,
+            )
+        anzahl = bib.anzahl_je_status(s, klasse)
+        kontext.update(
+            medien=medien,
+            anzahl=anzahl,
+            gesamt=sum(anzahl.values()),
+            status_filter=filter_status,
+            stimmungen=bib.stimmungen_alle(s),
+        )
+        return templates.TemplateResponse(request, "liste.html", kontext)
+
+    def listen_params(request: Request) -> dict[str, str]:
+        erlaubt = ("status", "sort", "erfolge", "ansicht")
+        return {k: request.query_params[k] for k in erlaubt if k in request.query_params}
 
     def geaendert_meldung(request: Request) -> str:
         for param, text in (("geaendert", "Status"), ("stimmung_geaendert", "Stimmung")):
@@ -234,73 +264,90 @@ def app_erstellen(
                 return "Keine Änderung." if anzahl == "0" else f"{text} bei {anzahl} Einträgen geändert."
         return ""
 
+    def zurueck_mit(zurueck: str, **params: object) -> str:
+        """Zurück zur Liste, von der die Mehrfachauswahl kam – nur eigene Listen-URLs erlaubt."""
+        teile = urlsplit(zurueck)
+        if teile.scheme or teile.netloc or teile.path not in ("/spiele", "/buecher"):
+            raise HTTPException(422, "Ungültige Rücksprungadresse")
+        query = [(k, v) for k, v in parse_qsl(teile.query) if k not in ("geaendert", "stimmung_geaendert")]
+        query += [(k, str(v)) for k, v in params.items()]
+        return teile.path + (f"?{urlencode(query)}" if query else "")
+
     @app.get("/spiele", response_class=HTMLResponse)
-    def spiele(request: Request, s: Sitzung, status: str | None = None, sort: str | None = None) -> HTMLResponse:
-        return liste(request, s, "spiele", status, sort, meldung=geaendert_meldung(request))
+    def spiele(request: Request, s: Sitzung) -> HTMLResponse:
+        return liste(request, s, "spiele", listen_params(request), meldung=geaendert_meldung(request))
 
     @app.post("/medien/status")
     def status_mehrere(
         s: Sitzung,
         neuer_status: Annotated[str, Form()],
-        tab: Annotated[str, Form()],
+        zurueck: Annotated[str, Form()],
         ids: Annotated[list[int] | None, Form()] = None,
-        filter_status: Annotated[str, Form()] = "",
-        sortierung: Annotated[str, Form()] = "",
     ) -> RedirectResponse:
-        if tab not in TABS:
-            raise HTTPException(422, "Unbekannter Bereich")
         try:
             status = _status(neuer_status)
         except bib.Eingabefehler as fehler:
             raise HTTPException(422, str(fehler)) from None
+        zurueck_mit(zurueck)  # vor der Änderung prüfen
         anzahl = bib.status_mehrere(s, ids or [], status)
         s.commit()
-        return RedirectResponse(tab_url(tab, filter_status, sortierung, geaendert=anzahl), status_code=303)
+        return RedirectResponse(zurueck_mit(zurueck, geaendert=anzahl), status_code=303)
 
     @app.post("/medien/stimmung")
     def stimmung_mehrere(
         s: Sitzung,
         stimmung_id: Annotated[int, Form()],
         aktion: Annotated[str, Form()],
-        tab: Annotated[str, Form()],
+        zurueck: Annotated[str, Form()],
         ids: Annotated[list[int] | None, Form()] = None,
-        filter_status: Annotated[str, Form()] = "",
-        sortierung: Annotated[str, Form()] = "",
     ) -> RedirectResponse:
-        if tab not in TABS or aktion not in ("hinzufuegen", "entfernen"):
+        if aktion not in ("hinzufuegen", "entfernen"):
             raise HTTPException(422, "Ungültige Anfrage")
+        zurueck_mit(zurueck)  # vor der Änderung prüfen
         try:
             anzahl = bib.stimmung_mehrere(s, ids or [], stimmung_id, hinzufuegen=aktion == "hinzufuegen")
         except bib.Eingabefehler as fehler:
             raise HTTPException(422, str(fehler)) from None
         s.commit()
-        return RedirectResponse(
-            tab_url(tab, filter_status, sortierung, stimmung_geaendert=anzahl), status_code=303
-        )
+        return RedirectResponse(zurueck_mit(zurueck, stimmung_geaendert=anzahl), status_code=303)
 
     @app.post("/spiele/steam-import", response_class=HTMLResponse)
     def steam_import(request: Request, s: Sitzung) -> HTMLResponse:
         if not (einstellungen.steam_api_key and einstellungen.steam_id):
-            return liste(request, s, "spiele", None, fehler=(
+            return liste(request, s, "spiele", {}, fehler=(
                 "Für den Steam-Import fehlen STEAM_API_KEY und/oder STEAM_ID in der .env. "
                 "Eintragen und die App neu starten."
             ))  # fmt: skip
+        key = einstellungen.steam_api_key.get_secret_value()
+        steam_id, http = einstellungen.steam_id, request.app.state.http
         try:
-            gefunden = steam.eigene_spiele(
-                einstellungen.steam_api_key.get_secret_value(), einstellungen.steam_id, request.app.state.http
-            )
+            gefunden = steam.eigene_spiele(key, steam_id, http)
         except steam.SteamFehler as fehler:
-            return liste(request, s, "spiele", None, fehler=str(fehler))
-        ergebnis = bib.steam_importieren(s, gefunden)
+            return liste(request, s, "spiele", {}, fehler=str(fehler))
+        appids = [g.appid for g in gefunden]
+        # Bilder und Erfolge sind Zugabe: schlagen sie fehl, läuft der Abgleich trotzdem durch
+        hinweise = []
+        try:
+            bilder = steam.store_bilder(appids, http)
+        except steam.SteamFehler:
+            bilder = None
+            hinweise.append("Cover konnten nicht aktualisiert werden.")
+        try:
+            erfolge = steam.erfolge(key, steam_id, appids, http)
+        except steam.SteamFehler:
+            erfolge = None
+            hinweise.append("Erfolge konnten nicht abgefragt werden.")
+        ergebnis = bib.steam_importieren(s, gefunden, bilder, erfolge)
         s.commit()
-        return liste(request, s, "spiele", None, meldung=(
+        meldung = (
             f"Steam abgeglichen: {ergebnis.neu} neu, {ergebnis.aktualisiert} aktualisiert, "
             f"{ergebnis.unveraendert} unverändert."
-        ))  # fmt: skip
+        )
+        return liste(request, s, "spiele", {}, meldung=" ".join([meldung, *hinweise]))
 
     @app.get("/buecher", response_class=HTMLResponse)
-    def buecher(request: Request, s: Sitzung, status: str | None = None, sort: str | None = None) -> HTMLResponse:
-        return liste(request, s, "buecher", status, sort, meldung=geaendert_meldung(request))
+    def buecher(request: Request, s: Sitzung) -> HTMLResponse:
+        return liste(request, s, "buecher", listen_params(request), meldung=geaendert_meldung(request))
 
     # --- Buch hinzufügen ---
 
@@ -351,10 +398,13 @@ def app_erstellen(
         seiten: Annotated[str, Form()] = "",
         cover_url: Annotated[str, Form()] = "",
         openlibrary_key: Annotated[str, Form()] = "",
+        reihe: Annotated[str, Form()] = "",
+        reihe_nr: Annotated[str, Form()] = "",
     ) -> Response:
         formular = {
             "titel": titel, "isbn": isbn, "autoren": autoren, "verlag": verlag,
             "jahr": jahr, "seiten": seiten, "cover_url": cover_url, "openlibrary_key": openlibrary_key,
+            "reihe": reihe, "reihe_nr": reihe_nr,
         }  # fmt: skip
         try:
             buch = bib.buch_anlegen(s, _buch_eingabe(formular))
@@ -412,6 +462,8 @@ def app_erstellen(
         seiten: Annotated[str, Form()] = "",
         aktuelle_seite: Annotated[str, Form()] = "",
         cover_url: Annotated[str, Form()] = "",
+        reihe: Annotated[str, Form()] = "",
+        reihe_nr: Annotated[str, Form()] = "",
     ) -> Response:
         medium = medium_oder_404(s, medium_id)
         try:
@@ -433,6 +485,8 @@ def app_erstellen(
                 medium.verlag = verlag.strip()[:200]
                 medium.jahr = _zahl(jahr, "Jahr", 1, 2100)
                 medium.seiten = _zahl(seiten, "Seiten", 1, 100_000)
+                medium.reihe = " ".join(reihe.split())[:200]
+                medium.reihe_nr = _zahl(reihe_nr, "Band", 0, 10_000)
                 bib.aktuelle_seite_setzen(medium, _zahl(aktuelle_seite, "Aktuelle Seite", 0, 100_000))
             s.commit()
         except bib.Eingabefehler as fehler:

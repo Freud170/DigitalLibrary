@@ -1,0 +1,9 @@
+<form method="get" action="/{{ tab }}" class="sortierung">
+  {% for name, wert in aktuell.items() if name != 'sort' and wert %}<input type="hidden" name="{{ name }}" value="{{ wert }}">{% endfor %}
+  <label>Sortieren
+    <select name="sort" onchange="this.form.submit()">
+      {% for wert, name in sortierungen.items() %}<option value="{{ wert }}" {{ 'selected' if wert == sortierung }}>{{ name }}</option>{% endfor %}
+    </select>
+  </label>
+  <noscript><button class="knopf">OK</button></noscript>
+</form>

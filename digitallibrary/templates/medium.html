@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_makros.html" import cover, erfolge %}
 {% block titel %}{{ m.titel }} · DigitalLibrary{% endblock %}
 {% block inhalt %}
 <a href="/{{ tab }}" class="zurueck">← {{ 'Bücher' if tab == 'buecher' else 'Spiele' }}</a>
@@ -7,8 +8,7 @@
 
 <div class="detail">
   <div class="detail-cover">
-    {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="Cover"
-      {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
+    {{ cover(m, lazy=false) }}
   </div>
 
   <form method="post" action="/medien/{{ m.id }}" class="box formular">
@@ -17,12 +17,17 @@
     {% if m.art == 'buch' %}
     <label>Autor(en)<input name="autoren" maxlength="500" value="{{ m.autoren }}"></label>
     <div class="zeile">
+      <label class="breit">Reihe<input name="reihe" maxlength="200" value="{{ m.reihe }}"></label>
+      <label>Band<input name="reihe_nr" inputmode="numeric" maxlength="5" value="{{ m.reihe_nr if m.reihe_nr is not none else '' }}"></label>
+    </div>
+    <div class="zeile">
       <label>ISBN<input name="isbn" maxlength="20" value="{{ m.isbn13 or '' }}"></label>
       <label>Seiten<input name="seiten" inputmode="numeric" maxlength="6" value="{{ m.seiten or '' }}"></label>
       <label>Jahr<input name="jahr" inputmode="numeric" maxlength="4" value="{{ m.jahr or '' }}"></label>
     </div>
     <label>Verlag<input name="verlag" maxlength="200" value="{{ m.verlag }}"></label>
     {% else %}
+    {{ erfolge(m) }}
     <p class="info">
       {{ m.untertitel }}
       {% if m.zuletzt_gespielt %} · zuletzt gespielt am {{ m.zuletzt_gespielt.strftime('%d.%m.%Y') }}{% endif %}

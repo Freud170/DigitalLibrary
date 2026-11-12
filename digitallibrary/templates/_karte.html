@@ -1,14 +1,14 @@
+{% from "_makros.html" import cover, erfolge %}
 <li class="karte" id="medium-{{ m.id }}">
   <input type="checkbox" class="auswahl" name="ids" value="{{ m.id }}" form="massen" aria-label="„{{ m.titel }}“ auswählen">
-  <a href="/medien/{{ m.id }}" class="cover" tabindex="-1">
-    {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="" loading="lazy"
-      {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
-  </a>
+  <a href="/medien/{{ m.id }}" class="cover" tabindex="-1">{{ cover(m) }}</a>
   <div class="karte-text">
     <a href="/medien/{{ m.id }}" class="karte-titel">{{ m.titel }}</a>
     {% if m.untertitel %}<span class="karte-unter">{{ m.untertitel }}</span>{% endif %}
+    {{ erfolge(m) }}
     <div class="karte-meta">
       {% if m.bewertung %}<span class="bewertung">★ {{ m.bewertung }}/10</span>{% endif %}
+      {% if m.art == 'buch' and m.reihe %}<span>{{ m.reihe }}{% if m.reihe_nr is not none %} · Band {{ m.reihe_nr }}{% endif %}</span>{% endif %}
       {% if m.art == 'buch' and m.aktuelle_seite and m.seiten %}<span>S. {{ m.aktuelle_seite }}/{{ m.seiten }}</span>{% endif %}
       {% for st in m.stimmungen %}<span class="tag">{{ st.name }}</span>{% endfor %}
     </div>

@@ -163,13 +163,13 @@ def test_stimmung_per_mehrfachauswahl(client, sitzung, bestand):
     assert 'formaction="/medien/stimmung"' in seite
     antwort = client.post(
         "/medien/stimmung",
-        data={"ids": ids, "stimmung_id": story.id, "aktion": "hinzufuegen", "tab": "spiele", "sortierung": "titel"},
+        data={"ids": ids, "stimmung_id": story.id, "aktion": "hinzufuegen", "zurueck": "/spiele?sort=titel"},
     )
     assert antwort.status_code == 303
     assert antwort.headers["location"] == "/spiele?sort=titel&stimmung_geaendert=2"
     assert "Stimmung bei 2 Einträgen geändert." in client.get(antwort.headers["location"]).text
     sitzung.expire_all()
     assert story in sitzung.get(Spiel, bestand["spiel2"].id).stimmungen
-    for falsch in ({"aktion": "loeschen"}, {"stimmung_id": 9999}, {"tab": "x"}):
-        daten = {"ids": ids, "stimmung_id": story.id, "aktion": "entfernen", "tab": "spiele", **falsch}
+    for falsch in ({"aktion": "loeschen"}, {"stimmung_id": 9999}, {"zurueck": "https://example.com"}):
+        daten = {"ids": ids, "stimmung_id": story.id, "aktion": "entfernen", "zurueck": "/spiele", **falsch}
         assert client.post("/medien/stimmung", data=daten).status_code == 422, falsch

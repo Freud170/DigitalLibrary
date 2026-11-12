@@ -1,0 +1,28 @@
+{# Cover mit Ersatzbild-Kette: Cover → Ersatz (z. B. Steam-Querformat) → gezeichnetes Cover. #}
+{% macro cover(m, lazy=true) -%}
+{%- if m.cover_url -%}
+<img src="{{ m.cover_url }}" alt=""{% if lazy %} loading="lazy"{% endif %}
+     {%- if m.cover_ersatz_url %} data-ersatz="{{ m.cover_ersatz_url }}"{% endif %} onerror="coverFehler(this)">
+{{ _gezeichnet(m, true) }}
+{%- else -%}
+{{ _gezeichnet(m, false) }}
+{%- endif -%}
+{%- endmacro %}
+
+{# Gezeichnetes Cover: bei Büchern wie ein Leineneinband mit Goldprägung #}
+{% macro _gezeichnet(m, versteckt) -%}
+<span class="cover-leer cover-{{ m.art }}" style="--farbton: {{ m.farbton }}"{% if versteckt %} hidden{% endif %}>
+  <span class="cover-leer-titel">{{ m.titel }}</span>
+  {%- if m.art == 'buch' and m.autoren %}<span class="cover-leer-autor">{{ m.autoren }}</span>{% endif -%}
+</span>
+{%- endmacro %}
+
+{% macro erfolge(m) -%}
+{%- if m.art == 'spiel' and m.erfolge_gesamt -%}
+<span class="erfolge{{ ' komplett' if m.erfolge_prozent == 100 }}"
+      title="{{ m.erfolge_erreicht or 0 }} von {{ m.erfolge_gesamt }} Erfolgen ({{ m.erfolge_prozent }} %)">
+  🏆 {{ m.erfolge_erreicht or 0 }}/{{ m.erfolge_gesamt }}
+  <span class="erfolge-balken"><span style="width: {{ m.erfolge_prozent }}%"></span></span>
+</span>
+{%- endif -%}
+{%- endmacro %}

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import enum
+import zlib
 
 from sqlalchemy import (
     CheckConstraint,
@@ -123,6 +124,11 @@ class Medium(Base):
         """Bild, falls cover_url nicht lädt (z. B. Steam-Spiel ohne Hochformat-Cover)."""
         return None
 
+    @property
+    def farbton(self) -> int:
+        """Fester Farbton (0–359) aus dem Titel – für gezeichnete Cover und Buchrücken."""
+        return zlib.crc32(self.titel.encode("utf-8")) % 360
+
 
 class Spiel(Medium):
     __tablename__ = "spiele"
@@ -131,15 +137,32 @@ class Spiel(Medium):
     steam_appid: Mapped[int | None] = mapped_column(unique=True)
     spielzeit_min: Mapped[int] = mapped_column(default=0)
     zuletzt_gespielt: Mapped[dt.datetime | None]
+    # Querformat-Bild aus dem Steam-Store (Ersatz, falls das Hochformat-Cover fehlt)
+    header_url: Mapped[str | None] = mapped_column(String(500))
+    # Steam-Erfolge. erfolge_gesamt: None = noch nicht abgefragt, 0 = Spiel hat keine Erfolge
+    erfolge_erreicht: Mapped[int | None]
+    erfolge_gesamt: Mapped[int | None]
 
     # inline: bei Abfragen über Medium werden die Spiel-Spalten gleich mitgeladen
     __mapper_args__ = {"polymorphic_identity": Art.SPIEL.value, "polymorphic_load": "inline"}  # noqa: RUF012
 
     @property
     def cover_ersatz_url(self) -> str | None:
+        if self.header_url:
+            return self.header_url
         if self.steam_appid is None:
             return None
         return steam.cover_ersatz_url(self.steam_appid)
+
+    @property
+    def hat_erfolge(self) -> bool:
+        return bool(self.erfolge_gesamt)
+
+    @property
+    def erfolge_prozent(self) -> int | None:
+        if not self.erfolge_gesamt:
+            return None
+        return int((self.erfolge_erreicht or 0) * 100 / self.erfolge_gesamt)
 
     @property
     def untertitel(self) -> str:
@@ -161,6 +184,8 @@ class Buch(Medium):
     seiten: Mapped[int | None]
     aktuelle_seite: Mapped[int | None]
     openlibrary_key: Mapped[str | None] = mapped_column(String(50))
+    reihe: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    reihe_nr: Mapped[int | None]
 
     __mapper_args__ = {"polymorphic_identity": Art.BUCH.value, "polymorphic_load": "inline"}  # noqa: RUF012
 

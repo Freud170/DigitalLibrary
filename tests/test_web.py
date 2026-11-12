@@ -30,7 +30,8 @@ def test_start_leitet_auf_was_als_naechstes(client):
 
 
 def test_leere_listen(client):
-    assert "Noch keine Bücher" in client.get("/buecher").text
+    assert "Noch keine Bücher" in client.get("/buecher?ansicht=liste").text
+    assert "Die Regale sind noch leer" in client.get("/buecher").text
     assert "Steam abgleichen" in client.get("/spiele").text
 
 
@@ -179,9 +180,9 @@ def test_status_in_der_liste_aendern(client, sitzung):
 def test_statusfilter(client):
     medium_id = _buch_speichern(client)
     client.post(f"/medien/{medium_id}/status", data={"status": "laeuft"})
-    assert "Der Wüstenplanet" in client.get("/buecher?status=laeuft").text
-    assert "Keine Einträge" in client.get("/buecher?status=beendet").text
-    assert "Der Wüstenplanet" in client.get("/buecher?status=unsinn").text  # unbekannt → alle
+    assert "Der Wüstenplanet" in client.get("/buecher?ansicht=liste&status=laeuft").text
+    assert "Keine Einträge" in client.get("/buecher?ansicht=liste&status=beendet").text
+    assert "Der Wüstenplanet" in client.get("/buecher?ansicht=liste&status=unsinn").text  # unbekannt → alle
 
 
 def test_stimmung_anlegen(client):

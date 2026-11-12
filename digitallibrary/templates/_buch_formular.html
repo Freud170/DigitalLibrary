@@ -10,6 +10,10 @@
       <label>Titel *<input name="titel" required maxlength="300" value="{{ formular.titel }}"></label>
       <label>Autor(en)<input name="autoren" maxlength="500" value="{{ formular.autoren }}"></label>
       <div class="zeile">
+        <label class="breit">Reihe<input name="reihe" maxlength="200" placeholder="z. B. Der Wüstenplanet" value="{{ formular.reihe }}"></label>
+        <label>Band<input name="reihe_nr" inputmode="numeric" maxlength="5" value="{{ formular.reihe_nr }}"></label>
+      </div>
+      <div class="zeile">
         <label>ISBN<input name="isbn" maxlength="20" value="{{ formular.isbn }}"></label>
         <label>Seiten<input name="seiten" inputmode="numeric" maxlength="6" value="{{ formular.seiten }}"></label>
         <label>Jahr<input name="jahr" inputmode="numeric" maxlength="4" value="{{ formular.jahr }}"></label>

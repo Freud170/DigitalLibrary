@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_makros.html" import cover %}
+{% block titel %}Bücherregal · DigitalLibrary{% endblock %}
+{% block inhalt %}
+{% set frei = kapazitaet - buecher_anzahl if buecher_anzahl < kapazitaet else 0 %}
+{% set sichtbar = regale | selectattr('anzahl') | list %}
+{% set naechstes = regale | rejectattr('anzahl') | first %}
+
+<div class="leiste">
+  {% include "_ansicht_umschalter.html" %}
+  <div class="zeile">
+    {% if buecher_anzahl %}{% include "_sortierung.html" %}{% endif %}
+    <a class="knopf primaer" href="/buecher/neu">+ Buch hinzufügen</a>
+  </div>
+</div>
+{% if meldung %}<p class="meldung ok">{{ meldung }}</p>{% endif %}
+
+<section class="bibliothek-uebersicht" aria-label="Wie voll ist die Bibliothek?">
+  <svg class="gebaeude" viewBox="0 0 400 300" role="img" aria-labelledby="gebaeude-titel">
+    <title id="gebaeude-titel">Bibliotheksgebäude: {{ buecher_anzahl }} von {{ kapazitaet }} Plätzen belegt</title>
+    <defs>
+      <radialGradient id="licht" cx="50%" cy="100%" r="90%">
+        <stop offset="0" stop-color="#fff2b8"/>
+        <stop offset="1" stop-color="#f6b93b"/>
+      </radialGradient>
+    </defs>
+    {# Nachthimmel mit Mond und Sternen #}
+    <rect class="himmel" x="0" y="0" width="400" height="300" rx="18"/>
+    <circle class="mond" cx="345" cy="38" r="15"/>
+    <circle class="himmel" cx="352" cy="33" r="13"/>
+    {% for x, y in [(40, 30), (90, 55), (150, 22), (250, 18), (300, 60), (20, 120), (380, 130), (70, 160)] %}
+    <circle class="stern" cx="{{ x }}" cy="{{ y }}" r="1.6"/>
+    {% endfor %}
+    {# Büsche #}
+    <ellipse class="busch" cx="38" cy="280" rx="30" ry="18"/>
+    <ellipse class="busch" cx="362" cy="280" rx="30" ry="18"/>
+    {# Gebäude #}
+    <rect class="mauer" x="50" y="92" width="300" height="190" rx="3"/>
+    <polygon class="dach" points="38,96 200,34 362,96"/>
+    <rect class="fries" x="44" y="94" width="312" height="18" rx="2"/>
+    <text class="schild" x="200" y="107.5" text-anchor="middle">BIBLIOTHEK</text>
+    {% if buecher_anzahl >= kapazitaet %}
+    <line class="mast" x1="200" y1="34" x2="200" y2="6"/>
+    <polygon class="fahne" points="200,6 226,12 200,18"/>
+    {% endif %}
+    {# 20 Fenster = 20 Regale, je voller, desto heller #}
+    {% for r in regale[:20] %}
+    {% set spalte = loop.index0 % 5 %}{% set zeile = loop.index0 // 5 %}
+    {% set x = 68 + spalte * 56 %}{% set y = 122 + zeile * 33 %}
+    <a href="#regal-{{ r.nr }}" class="fenster{{ ' leer' if not r.anzahl }}">
+      <title>Regal {{ r.nr }}: {{ r.anzahl }} von {{ plaetze_pro_regal }} Plätzen</title>
+      <rect class="fenster-glas" x="{{ x }}" y="{{ y }}" width="40" height="24" rx="3"/>
+      {% if r.anzahl %}
+      {% set h = (24 * r.fuellstand) | round(1) %}
+      <rect class="fenster-licht" x="{{ x }}" y="{{ y + 24 - h }}" width="40" height="{{ h }}" rx="2" fill="url(#licht)"/>
+      {% endif %}
+      <path class="sprosse" d="M{{ x + 20 }} {{ y }}v24M{{ x }} {{ y + 12 }}h40"/>
+      <rect class="fenster-rahmen" x="{{ x }}" y="{{ y }}" width="40" height="24" rx="3"/>
+    </a>
+    {% endfor %}
+    {# Tür und Treppe #}
+    <path class="tuer" d="M186 282v-20a14 14 0 0 1 28 0v20z"/>
+    <circle class="klinke" cx="208" cy="272" r="1.5"/>
+    <rect class="stufe" x="172" y="282" width="56" height="6" rx="1"/>
+    <rect class="stufe" x="164" y="288" width="72" height="6" rx="1"/>
+    {# Laternen #}
+    <rect class="laterne-mast" x="150" y="252" width="2.5" height="36"/>
+    <circle class="laterne" cx="151" cy="250" r="4.5"/>
+    <rect class="laterne-mast" x="247.5" y="252" width="2.5" height="36"/>
+    <circle class="laterne" cx="249" cy="250" r="4.5"/>
+  </svg>
+
+  <div class="uebersicht-text">
+    <p class="gross"><strong>{{ buecher_anzahl }}</strong> von {{ kapazitaet }} Plätzen belegt</p>
+    <div class="fortschritt" role="progressbar" aria-valuemin="0" aria-valuemax="{{ kapazitaet }}" aria-valuenow="{{ buecher_anzahl }}">
+      <span style="width: {{ [buecher_anzahl / kapazitaet * 100, 100] | min }}%"></span>
+    </div>
+    {% if buecher_anzahl >= kapazitaet %}
+    <p>🎉 <strong>Offizielle Bibliothek!</strong> Alle {{ kapazitaet }} Plätze sind belegt{% if buecher_anzahl > kapazitaet %} – und es wird angebaut ({{ buecher_anzahl - kapazitaet }} im Anbau){% endif %}.</p>
+    {% elif buecher_anzahl == 0 %}
+    <p>Die Regale sind noch leer. Das erste Buch macht das erste Fenster hell.</p>
+    {% else %}
+    <p>Noch <strong>{{ frei }}</strong> Bücher bis zur offiziellen Bibliothek.</p>
+    {% endif %}
+    <p class="info">Jedes Fenster ist ein Regal mit {{ plaetze_pro_regal }} Plätzen. Klick drauf, um hinzuspringen.</p>
+  </div>
+</section>
+
+{# Benutzte Regale; ein leeres nur, wenn noch gar nichts drinsteht oder das letzte voll ist #}
+{% for r in sichtbar + ([naechstes] if naechstes and (not sichtbar or sichtbar[-1].anzahl == plaetze_pro_regal) else []) %}
+<section class="regal" id="regal-{{ r.nr }}">
+  <h2 class="regal-schild">
+    <span>Regal {{ r.nr }}{% if r.nr > 20 %} · Anbau{% endif %}</span>
+    <span class="regal-zahl">{{ r.anzahl }} / {{ plaetze_pro_regal }}</span>
+  </h2>
+  <div class="regal-korpus">
+    {% for boden in r.boeden %}
+    <div class="boden">
+      {% for b in boden %}
+      <a href="/medien/{{ b.id }}" class="buch status-{{ b.status.value }}"
+         title="{{ b.titel }}{% if b.autoren %} – {{ b.autoren }}{% endif %}{% if b.reihe %} ({{ b.reihe }}{% if b.reihe_nr is not none %} {{ b.reihe_nr }}{% endif %}){% endif %} · {{ b.status.label }}">
+        {{ cover(b) }}
+        {% if b.status == Status.LAEUFT %}<span class="lesezeichen" aria-label="liest du gerade"></span>{% endif %}
+        {% if b.status == Status.BEENDET %}<span class="gelesen" aria-label="gelesen">✓</span>{% endif %}
+      </a>
+      {% endfor %}
+      {% for _ in range(10 - boden | length) %}<span class="platz" aria-hidden="true"></span>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

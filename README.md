@@ -13,7 +13,15 @@ Nächstes?“ schneller beantwortet ist. Läuft lokal im Browser.
   prüfbar) oder von Hand ohne ISBN.
 - **Status** pro Medium (Backlog / Läuft / Beendet / Abgebrochen), Bewertung 1–10, Notiz,
   Stimmungen, geschätzte Dauer, aktuelle Seite. Status lässt sich direkt in der Liste ändern.
-- **Spiele:** „Steam abgleichen“ holt die Steam-Bibliothek (Spielzeit, zuletzt gespielt, Cover).
+- **Bücherregal** (Standardansicht im Tab Bücher): 20 Holzregale à 50 Plätze = 1000 Plätze bis zur
+  „offiziellen Bibliothek“. Bücher mit Original-Cover (sonst gezeichneter Leineneinband), sortierbar
+  nach Autor, Reihe, Titel, Jahr, zuletzt hinzugefügt. Lesezeichen = liest du gerade, ✓ = gelesen,
+  grau = abgebrochen. Oben ein Bibliotheksgebäude, dessen 20 Fenster je nach Füllstand des Regals
+  leuchten, und ein Zähler „x / 1000“ oben rechts. Umschalter zur Listenansicht (Mehrfachauswahl).
+  Bücher haben die Felder Reihe und Band.
+- **Spiele:** „Steam abgleichen“ holt die Steam-Bibliothek (Spielzeit, zuletzt gespielt, Cover über
+  den Steam-Store, Erfolge 🏆 erreicht/gesamt). Filter nach Erfolgen (100 % / angefangen / noch keiner /
+  ohne Erfolge) und Sortierung nach Erfolgs-Prozent.
   Neue Spiele landen im Backlog, in den letzten 2 Wochen gespielte auf „Läuft“. Beim erneuten
   Abgleich wird nur die Spielzeit aktualisiert – eigene Änderungen (Titel, Status …) bleiben.
   Voraussetzung: `STEAM_API_KEY` und `STEAM_ID` in der `.env`, Spieldetails im Profil öffentlich.

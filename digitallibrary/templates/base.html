@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titel %}DigitalLibrary{% endblock %}</title>
   <link rel="stylesheet" href="/static/stil.css">
+  <script>
+    // Muss vor den Bildern bereitstehen (onerror kann vor defer-Skripten feuern)
+    function coverFehler(img) {
+      if (img.dataset.ersatz) { const url = img.dataset.ersatz; img.dataset.ersatz = ""; img.src = url; return; }
+      img.hidden = true;
+      if (img.nextElementSibling) img.nextElementSibling.hidden = false;
+    }
+  </script>
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/liste.js" defer></script>
 </head>
@@ -16,6 +24,12 @@
       <a href="/spiele" class="{{ 'aktiv' if tab == 'spiele' }}">Spiele</a>
       <a href="/buecher" class="{{ 'aktiv' if tab == 'buecher' }}">Bücher</a>
     </nav>
+    {% if buecher_anzahl is defined %}
+    <a href="/buecher" class="zaehler{{ ' offiziell' if buecher_anzahl >= kapazitaet }}"
+       title="{{ buecher_anzahl }} von {{ kapazitaet }} Bibliotheksplätzen belegt">
+      📚 <strong>{{ buecher_anzahl }}</strong>&nbsp;/&nbsp;{{ kapazitaet }}
+    </a>
+    {% endif %}
   </header>
   <main>
     {% block inhalt %}{% endblock %}

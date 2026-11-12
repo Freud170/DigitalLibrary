@@ -1,15 +1,19 @@
 {% extends "base.html" %}
 {% block titel %}{{ 'Bücher' if tab == 'buecher' else 'Spiele' }} · DigitalLibrary{% endblock %}
 {% block inhalt %}
-{% set sort_param = '' if sortierung == 'status' else 'sort=' ~ sortierung %}
 <div class="leiste">
   <div class="filter">
-    <a href="/{{ tab }}{{ '?' ~ sort_param if sort_param }}" class="chip {{ 'aktiv' if not status_filter }}">Alle <span>{{ gesamt }}</span></a>
+    <a href="{{ link(status=None) }}" class="chip {{ 'aktiv' if not status_filter }}">Alle <span>{{ gesamt }}</span></a>
     {% for s in STATUS_REIHENFOLGE %}
-    <a href="/{{ tab }}?status={{ s.value }}{{ '&' ~ sort_param if sort_param }}" class="chip {{ 'aktiv' if status_filter == s }}">{{ s.label }} <span>{{ anzahl[s] }}</span></a>
+    <a href="{{ link(status=s.value) }}" class="chip {{ 'aktiv' if status_filter == s }}">{{ s.label }} <span>{{ anzahl[s] }}</span></a>
     {% endfor %}
   </div>
-  {% if tab == 'buecher' %}<a class="knopf primaer" href="/buecher/neu">+ Buch hinzufügen</a>{% endif %}
+  {% if tab == 'buecher' %}
+  <div class="zeile">
+    {% include "_ansicht_umschalter.html" %}
+    <a class="knopf primaer" href="/buecher/neu">+ Buch hinzufügen</a>
+  </div>
+  {% endif %}
   {% if tab == 'spiele' %}
   <form method="post" action="/spiele/steam-import" class="zeile"
         hx-post="/spiele/steam-import" hx-target="main" hx-select="main" hx-swap="outerHTML" hx-indicator="#import-laeuft">
@@ -18,21 +22,24 @@
   </form>
   {% endif %}
 </div>
+
+{% if tab == 'spiele' %}
+<div class="filter erfolge-filter" aria-label="Nach Erfolgen filtern">
+  <span class="filter-titel">🏆 Erfolge</span>
+  <a href="{{ link(erfolge=None) }}" class="chip {{ 'aktiv' if not erfolge_filter }}">Egal</a>
+  {% for wert, name in ERFOLGE_FILTER.items() %}
+  <a href="{{ link(erfolge=wert) }}" class="chip {{ 'aktiv' if erfolge_filter == wert }}">{{ name }} <span>{{ erfolge_anzahl[wert] }}</span></a>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if meldung %}<p class="meldung ok">{{ meldung }}</p>{% endif %}
 {% if fehler %}<p class="meldung fehler">{{ fehler }}</p>{% endif %}
 
 {% if medien %}
 <div class="werkzeuge">
   <input type="search" class="suche" placeholder="Suchen …" aria-label="Liste durchsuchen">
-  <form method="get" action="/{{ tab }}" class="sortierung">
-    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter.value }}">{% endif %}
-    <label>Sortieren
-      <select name="sort" onchange="this.form.submit()">
-        {% for wert, name in sortierungen.items() %}<option value="{{ wert }}" {{ 'selected' if wert == sortierung }}>{{ name }}</option>{% endfor %}
-      </select>
-    </label>
-    <noscript><button class="knopf">OK</button></noscript>
-  </form>
+  {% include "_sortierung.html" %}
   <button type="button" class="knopf" data-alle-sichtbaren>Alle sichtbaren auswählen</button>
 </div>
 
@@ -41,9 +48,7 @@
 </ul>
 
 <form id="massen" method="post" action="/medien/status" class="auswahl-leiste" hidden>
-  <input type="hidden" name="tab" value="{{ tab }}">
-  <input type="hidden" name="filter_status" value="{{ status_filter.value if status_filter else '' }}">
-  <input type="hidden" name="sortierung" value="{{ sortierung }}">
+  <input type="hidden" name="zurueck" value="{{ hier }}">
   <strong class="auswahl-anzahl">0 ausgewählt</strong>
   <span class="gruppe">
     <label>Status
@@ -66,8 +71,8 @@
   {% endif %}
   <button type="button" class="knopf" data-auswahl-leeren>Auswahl aufheben</button>
 </form>
-{% elif status_filter %}
-<p class="leer">Keine Einträge mit Status „{{ status_filter.label }}“.</p>
+{% elif status_filter or erfolge_filter %}
+<p class="leer">Keine Einträge mit diesem Filter. <a href="{{ link(status=None, erfolge=None) }}">Filter zurücksetzen</a></p>
 {% elif tab == 'spiele' %}
 <p class="leer">Noch keine Spiele. Mit „Steam abgleichen“ holst du deine Steam-Bibliothek.</p>
 {% else %}

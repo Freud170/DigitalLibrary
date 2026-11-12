@@ -46,16 +46,47 @@ def steam_antwort() -> dict[str, object]:
 
 
 @pytest.fixture
+def steam_store() -> dict[str, object]:
+    """Aufbau wie IStoreBrowseService/GetItems: Portal mit klassischen, Hades mit Hash-Pfaden, Stardew ohne Store."""
+    return {"antwort": {"response": {"store_items": [
+        {"item_type": 0, "id": 400, "success": 1, "visible": True, "name": "Portal", "appid": 400,
+         "assets": {"asset_url_format": "steam/apps/400/${FILENAME}?t=1745368554",
+                    "header": "header.jpg", "library_capsule": "library_600x900.jpg"}},
+        {"item_type": 0, "id": 1145360, "success": 1, "visible": True, "name": "Hades", "appid": 1145360,
+         "assets": {"asset_url_format": "steam/apps/1145360/${FILENAME}?t=1",
+                    "header": "aaa111/header.jpg", "library_capsule": "bbb222/library_capsule.jpg"}},
+        {"item_type": 0, "id": 413150, "success": 15},
+    ]}}}  # fmt: skip
+
+
+@pytest.fixture
+def steam_erfolge() -> dict[str, object]:
+    """Aufbau wie IPlayerService/GetTopAchievementsForGames (Liste = freigeschaltete Erfolge)."""
+    erfolg = {"statid": 0, "bit": 1, "name": "Erfolg", "desc": "", "icon": "x.jpg", "icon_gray": "y.jpg",
+              "hidden": False, "player_percent_unlocked": "50.0"}  # fmt: skip
+    return {"antwort": {"response": {"games": [
+        {"appid": 400, "total_achievements": 15, "achievements": [erfolg] * 15},
+        {"appid": 1145360, "total_achievements": 49, "achievements": [erfolg] * 12},
+        {"appid": 413150},
+    ]}}}  # fmt: skip
+
+
+@pytest.fixture
 def anfragen() -> list[httpx.Request]:
     return []
 
 
 @pytest.fixture
-def http_client(openlibrary_antworten, steam_antwort, anfragen) -> httpx.Client:
+def http_client(openlibrary_antworten, steam_antwort, steam_store, steam_erfolge, anfragen) -> httpx.Client:
     def antworten(request: httpx.Request) -> httpx.Response:
         anfragen.append(request)
         if request.url.host == "api.steampowered.com":
-            antwort = steam_antwort["antwort"]
+            if "GetItems" in request.url.path:
+                antwort = steam_store["antwort"]
+            elif "GetTopAchievementsForGames" in request.url.path:
+                antwort = steam_erfolge["antwort"]
+            else:
+                antwort = steam_antwort["antwort"]
         else:
             isbn = request.url.params["bibkeys"].removeprefix("ISBN:")
             antwort = openlibrary_antworten.get(isbn, {})
