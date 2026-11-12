@@ -1,8 +1,8 @@
 # Claude
 .claude
 
-# Eigene Daten – niemals ins Repo!
-daten/
+# Eigene Daten – niemals ins Repo! (nur der Ordner im Projektwurzel, nicht tests/daten)
+/daten/
 *.db
 *.db-journal
 *.db-wal
