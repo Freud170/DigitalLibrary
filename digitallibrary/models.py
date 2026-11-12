@@ -21,6 +21,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from . import steam
+
 # Feste Namen für Constraints – nötig, damit Alembic sie unter SQLite (Batch-Modus) ändern kann.
 NAMENSKONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -116,6 +118,11 @@ class Medium(Base):
     def untertitel(self) -> str:
         return ""
 
+    @property
+    def cover_ersatz_url(self) -> str | None:
+        """Bild, falls cover_url nicht lädt (z. B. Steam-Spiel ohne Hochformat-Cover)."""
+        return None
+
 
 class Spiel(Medium):
     __tablename__ = "spiele"
@@ -126,6 +133,12 @@ class Spiel(Medium):
     zuletzt_gespielt: Mapped[dt.datetime | None]
 
     __mapper_args__ = {"polymorphic_identity": Art.SPIEL.value}  # noqa: RUF012
+
+    @property
+    def cover_ersatz_url(self) -> str | None:
+        if self.steam_appid is None:
+            return None
+        return steam.cover_ersatz_url(self.steam_appid)
 
     @property
     def untertitel(self) -> str:

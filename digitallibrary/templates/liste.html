@@ -9,16 +9,27 @@
     {% endfor %}
   </div>
   {% if tab == 'buecher' %}<a class="knopf primaer" href="/buecher/neu">+ Buch hinzufügen</a>{% endif %}
+  {% if tab == 'spiele' %}
+  <form method="post" action="/spiele/steam-import" class="zeile"
+        hx-post="/spiele/steam-import" hx-target="main" hx-select="main" hx-swap="outerHTML" hx-indicator="#import-laeuft">
+    <span id="import-laeuft" class="htmx-indicator">Steam wird abgefragt …</span>
+    <button class="knopf primaer">Steam abgleichen</button>
+  </form>
+  {% endif %}
 </div>
+{% if meldung %}<p class="meldung ok">{{ meldung }}</p>{% endif %}
+{% if fehler %}<p class="meldung fehler">{{ fehler }}</p>{% endif %}
 
 {% if medien %}
+<input type="search" class="suche" placeholder="Suchen …" aria-label="Liste durchsuchen"
+       oninput="const q=this.value.toLowerCase();document.querySelectorAll('.raster .karte').forEach(k=>k.hidden=!k.textContent.toLowerCase().includes(q))">
 <ul class="raster">
   {% for m in medien %}{% include "_karte.html" %}{% endfor %}
 </ul>
 {% elif status_filter %}
 <p class="leer">Keine Einträge mit Status „{{ status_filter.label }}“.</p>
 {% elif tab == 'spiele' %}
-<p class="leer">Noch keine Spiele. Der Steam-Import kommt im nächsten Schritt.</p>
+<p class="leer">Noch keine Spiele. Mit „Steam abgleichen“ holst du deine Steam-Bibliothek.</p>
 {% else %}
 <p class="leer">Noch keine Bücher. <a href="/buecher/neu">Erstes Buch hinzufügen</a></p>
 {% endif %}

@@ -31,7 +31,7 @@ def test_start_leitet_auf_buecher(client):
 
 def test_leere_listen(client):
     assert "Noch keine Bücher" in client.get("/buecher").text
-    assert "Steam-Import kommt" in client.get("/spiele").text
+    assert "Steam abgleichen" in client.get("/spiele").text
 
 
 def test_isbn_suche_fuellt_formular(client, anfragen):

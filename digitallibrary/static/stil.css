@@ -107,6 +107,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 1rem 16px 3rem; }
 .status-beendet { color: var(--s-beendet); }
 .status-abgebrochen { color: var(--s-abgebrochen); }
 .leer { color: var(--gedaempft); padding: 2rem 0; }
+.suche { margin-bottom: .75rem; max-width: 360px; background: var(--flaeche); }
+.karte[hidden] { display: none; }
 
 /* Formulare */
 .box { background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }

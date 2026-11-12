@@ -7,7 +7,8 @@
 
 <div class="detail">
   <div class="detail-cover">
-    {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="Cover">{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
+    {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="Cover"
+      {% if m.cover_ersatz_url %}data-ersatz="{{ m.cover_ersatz_url }}" onerror="this.onerror=null;this.src=this.dataset.ersatz"{% endif %}>{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
   </div>
 
   <form method="post" action="/medien/{{ m.id }}" class="box formular">
@@ -22,7 +23,11 @@
     </div>
     <label>Verlag<input name="verlag" maxlength="200" value="{{ m.verlag }}"></label>
     {% else %}
-    <p class="info">{{ m.untertitel }}{% if m.steam_appid %} · Steam-App {{ m.steam_appid }}{% endif %}</p>
+    <p class="info">
+      {{ m.untertitel }}
+      {% if m.zuletzt_gespielt %} · zuletzt gespielt am {{ m.zuletzt_gespielt.strftime('%d.%m.%Y') }}{% endif %}
+      {% if m.steam_appid %} · <a href="https://store.steampowered.com/app/{{ m.steam_appid }}/" target="_blank" rel="noopener noreferrer">im Steam-Shop</a>{% endif %}
+    </p>
     {% endif %}
 
     <div class="zeile">

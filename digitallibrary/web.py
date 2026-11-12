@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from . import bibliothek as bib
 from . import isbn as isbn_modul
-from . import openlibrary
+from . import openlibrary, steam
 from .config import Einstellungen
 from .db import engine_erstellen, migrieren
 from .models import STATUS_REIHENFOLGE, Buch, Medium, Spiel, Status
@@ -160,7 +160,9 @@ def app_erstellen(
     def start() -> RedirectResponse:
         return RedirectResponse("/buecher", status_code=303)
 
-    def liste(request: Request, s: Session, tab: str, status: str | None) -> HTMLResponse:
+    def liste(
+        request: Request, s: Session, tab: str, status: str | None, *, meldung: str = "", fehler: str = ""
+    ) -> HTMLResponse:
         klasse = TABS[tab]
         filter_status = Status(status) if status in {st.value for st in Status} else None
         anzahl = bib.anzahl_je_status(s, klasse)
@@ -173,12 +175,34 @@ def app_erstellen(
                 "anzahl": anzahl,
                 "gesamt": sum(anzahl.values()),
                 "status_filter": filter_status,
+                "meldung": meldung,
+                "fehler": fehler,
             },
         )
 
     @app.get("/spiele", response_class=HTMLResponse)
     def spiele(request: Request, s: Sitzung, status: str | None = None) -> HTMLResponse:
         return liste(request, s, "spiele", status)
+
+    @app.post("/spiele/steam-import", response_class=HTMLResponse)
+    def steam_import(request: Request, s: Sitzung) -> HTMLResponse:
+        if not (einstellungen.steam_api_key and einstellungen.steam_id):
+            return liste(request, s, "spiele", None, fehler=(
+                "Für den Steam-Import fehlen STEAM_API_KEY und/oder STEAM_ID in der .env. "
+                "Eintragen und die App neu starten."
+            ))  # fmt: skip
+        try:
+            gefunden = steam.eigene_spiele(
+                einstellungen.steam_api_key.get_secret_value(), einstellungen.steam_id, request.app.state.http
+            )
+        except steam.SteamFehler as fehler:
+            return liste(request, s, "spiele", None, fehler=str(fehler))
+        ergebnis = bib.steam_importieren(s, gefunden)
+        s.commit()
+        return liste(request, s, "spiele", None, meldung=(
+            f"Steam abgeglichen: {ergebnis.neu} neu, {ergebnis.aktualisiert} aktualisiert, "
+            f"{ergebnis.unveraendert} unverändert."
+        ))  # fmt: skip
 
     @app.get("/buecher", response_class=HTMLResponse)
     def buecher(request: Request, s: Sitzung, status: str | None = None) -> HTMLResponse:

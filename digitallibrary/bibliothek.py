@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from .models import STATUS_REIHENFOLGE, Buch, Fortschritt, Medium, Status, Stimmung
+from . import steam
+from .models import STATUS_REIHENFOLGE, Buch, Fortschritt, Medium, Spiel, Status, Stimmung
+from .steam import SteamSpiel
 
 
 class Eingabefehler(ValueError):
@@ -131,3 +133,53 @@ def stimmung_anlegen(sitzung: Session, name: str) -> Stimmung:
 
 def medium_holen(sitzung: Session, medium_id: int) -> Medium | None:
     return sitzung.get(Medium, medium_id)
+
+
+# --- Steam -------------------------------------------------------------------
+
+
+@dataclass
+class ImportErgebnis:
+    neu: int = 0
+    aktualisiert: int = 0
+    unveraendert: int = 0
+
+
+def steam_importieren(sitzung: Session, spiele: list[SteamSpiel]) -> ImportErgebnis:
+    """Gleicht die Steam-Bibliothek ab.
+
+    Neue Spiele kommen in den Backlog (in den letzten 2 Wochen gespielt → „Läuft“).
+    Bei vorhandenen werden nur Spielzeit und „zuletzt gespielt“ aktualisiert – Titel, Status,
+    Bewertung usw. gehören Rico und bleiben unangetastet. Jede Spielzeit-Änderung wird als
+    Momentaufnahme in `fortschritt` gespeichert. Spiele, die nicht mehr bei Steam sind, bleiben.
+    """
+    vorhandene = {s.steam_appid: s for s in sitzung.scalars(select(Spiel).where(Spiel.steam_appid.is_not(None)))}
+    ergebnis = ImportErgebnis()
+    for daten in spiele:
+        spiel = vorhandene.get(daten.appid)
+        if spiel is None:
+            spiel = Spiel(
+                titel=daten.name,
+                steam_appid=daten.appid,
+                spielzeit_min=daten.spielzeit_min,
+                zuletzt_gespielt=daten.zuletzt_gespielt,
+                cover_url=steam.cover_url(daten.appid),
+                status=Status.LAEUFT if daten.spielzeit_2wochen_min else Status.BACKLOG,
+            )
+            if spiel.status == Status.LAEUFT:
+                spiel.begonnen_am = dt.date.today()
+            if daten.spielzeit_min:
+                spiel.fortschritt.append(Fortschritt(wert=daten.spielzeit_min))
+            sitzung.add(spiel)
+            vorhandene[daten.appid] = spiel
+            ergebnis.neu += 1
+        elif spiel.spielzeit_min != daten.spielzeit_min or spiel.zuletzt_gespielt != daten.zuletzt_gespielt:
+            if spiel.spielzeit_min != daten.spielzeit_min:
+                spiel.fortschritt.append(Fortschritt(wert=daten.spielzeit_min))
+            spiel.spielzeit_min = daten.spielzeit_min
+            spiel.zuletzt_gespielt = daten.zuletzt_gespielt
+            ergebnis.aktualisiert += 1
+        else:
+            ergebnis.unveraendert += 1
+    sitzung.flush()
+    return ergebnis

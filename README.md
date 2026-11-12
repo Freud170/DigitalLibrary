@@ -9,7 +9,11 @@ Nächstes?“ schneller beantwortet ist. Läuft lokal im Browser.
   prüfbar) oder von Hand ohne ISBN.
 - **Status** pro Medium (Backlog / Läuft / Beendet / Abgebrochen), Bewertung 1–10, Notiz,
   Stimmungen, geschätzte Dauer, aktuelle Seite. Status lässt sich direkt in der Liste ändern.
-- **Spiele:** Tab vorhanden, der Steam-Import folgt.
+- **Spiele:** „Steam abgleichen“ holt die Steam-Bibliothek (Spielzeit, zuletzt gespielt, Cover).
+  Neue Spiele landen im Backlog, in den letzten 2 Wochen gespielte auf „Läuft“. Beim erneuten
+  Abgleich wird nur die Spielzeit aktualisiert – eigene Änderungen (Titel, Status …) bleiben.
+  Voraussetzung: `STEAM_API_KEY` und `STEAM_ID` in der `.env`, Spieldetails im Profil öffentlich.
+- Suchfeld in den Listen.
 - Geplant: „Was als Nächstes?“-Modus, Spielzeit- und Lese-Verlauf, Jahresstatistik.
 
 ## Einrichten (Windows, PowerShell)
@@ -47,5 +51,6 @@ Aufbau:
 | `digitallibrary/bibliothek.py` | Fachlogik (unabhängig von der Weboberfläche) |
 | `digitallibrary/web.py` | Routen (FastAPI), Formular-Prüfung |
 | `digitallibrary/openlibrary.py`, `isbn.py` | ISBN-Prüfung und Open-Library-Abfrage |
+| `digitallibrary/steam.py` | Steam Web API (GetOwnedGames), Cover-URLs |
 | `digitallibrary/db.py`, `migrations/` | Datenbank, Alembic-Migrationen, Sicherung |
 | `digitallibrary/templates/`, `static/` | Jinja2-Templates, CSS, htmx 2.0.4 (lokal) |
