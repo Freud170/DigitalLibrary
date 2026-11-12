@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block titel %}{{ m.titel }} · DigitalLibrary{% endblock %}
+{% block inhalt %}
+<a href="/{{ tab }}" class="zurueck">← {{ 'Bücher' if tab == 'buecher' else 'Spiele' }}</a>
+{% if gespeichert %}<p class="meldung ok">Gespeichert.</p>{% endif %}
+{% if fehler %}<p class="meldung fehler">{{ fehler }}</p>{% endif %}
+
+<div class="detail">
+  <div class="detail-cover">
+    {% if m.cover_url %}<img src="{{ m.cover_url }}" alt="Cover">{% else %}<span class="cover-leer">{{ m.titel[:1] }}</span>{% endif %}
+  </div>
+
+  <form method="post" action="/medien/{{ m.id }}" class="box formular">
+    <label>Titel *<input name="titel" required maxlength="300" value="{{ m.titel }}"></label>
+
+    {% if m.art == 'buch' %}
+    <label>Autor(en)<input name="autoren" maxlength="500" value="{{ m.autoren }}"></label>
+    <div class="zeile">
+      <label>ISBN<input name="isbn" maxlength="20" value="{{ m.isbn13 or '' }}"></label>
+      <label>Seiten<input name="seiten" inputmode="numeric" maxlength="6" value="{{ m.seiten or '' }}"></label>
+      <label>Jahr<input name="jahr" inputmode="numeric" maxlength="4" value="{{ m.jahr or '' }}"></label>
+    </div>
+    <label>Verlag<input name="verlag" maxlength="200" value="{{ m.verlag }}"></label>
+    {% else %}
+    <p class="info">{{ m.untertitel }}{% if m.steam_appid %} · Steam-App {{ m.steam_appid }}{% endif %}</p>
+    {% endif %}
+
+    <div class="zeile">
+      <label>Status
+        <select name="status">
+          {% for s in STATUS_REIHENFOLGE %}<option value="{{ s.value }}" {{ 'selected' if s == m.status }}>{{ s.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Bewertung
+        <select name="bewertung">
+          <option value="">–</option>
+          {% for i in range(1, 11) %}<option value="{{ i }}" {{ 'selected' if m.bewertung == i }}>{{ i }}</option>{% endfor %}
+        </select>
+      </label>
+      {% if m.art == 'buch' %}
+      <label>Aktuelle Seite<input name="aktuelle_seite" inputmode="numeric" maxlength="6" value="{{ m.aktuelle_seite if m.aktuelle_seite is not none else '' }}"></label>
+      {% endif %}
+      <label>Dauer (Stunden)
+        <input name="dauer_h" inputmode="decimal" maxlength="7" value="{{ m.dauer_min | stunden }}"
+               placeholder="{{ ('≈ ' ~ (m.geschaetzte_dauer_min | stunden)) if m.geschaetzte_dauer_min else 'geschätzt' }}">
+      </label>
+    </div>
+
+    <fieldset id="stimmungen">
+      <legend>Stimmung</legend>
+      {% for st in stimmungen %}
+      <label class="check"><input type="checkbox" name="stimmung_ids" value="{{ st.id }}" {{ 'checked' if st in m.stimmungen }}>{{ st.name }}</label>
+      {% endfor %}
+    </fieldset>
+
+    <label>Notiz<textarea name="notiz" rows="4" maxlength="5000">{{ m.notiz }}</textarea></label>
+    <label>Cover-URL<input name="cover_url" maxlength="500" placeholder="https://…" value="{{ m.cover_url or '' }}"></label>
+
+    <p class="daten">
+      Hinzugefügt am {{ m.hinzugefuegt_am.strftime('%d.%m.%Y') }}
+      {% if m.begonnen_am %} · begonnen am {{ m.begonnen_am.strftime('%d.%m.%Y') }}{% endif %}
+      {% if m.beendet_am %} · {{ 'beendet' if m.status == Status.BEENDET else 'abgebrochen' }} am {{ m.beendet_am.strftime('%d.%m.%Y') }}{% endif %}
+    </p>
+    <div class="aktionen"><button class="knopf primaer">Speichern</button></div>
+  </form>
+</div>
+
+<div class="nebenaktionen">
+  <form method="post" action="/stimmungen" class="zeile">
+    <input type="hidden" name="zurueck" value="{{ m.id }}">
+    <input name="name" maxlength="50" placeholder="Neue Stimmung, z. B. kurzweilig" aria-label="Neue Stimmung">
+    <button class="knopf">Stimmung anlegen</button>
+  </form>
+  <form method="post" action="/medien/{{ m.id }}/loeschen" onsubmit="return confirm(this.dataset.frage)"
+        data-frage="„{{ m.titel }}“ wirklich löschen? Das lässt sich nicht rückgängig machen.">
+    <button class="knopf gefahr">Löschen</button>
+  </form>
+</div>
+{% endblock %}

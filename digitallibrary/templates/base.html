@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}DigitalLibrary{% endblock %}</title>
+  <link rel="stylesheet" href="/static/stil.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="kopf">
+    <a class="marke" href="/">DigitalLibrary</a>
+    <nav class="tabs" aria-label="Bereiche">
+      <a href="/spiele" class="{{ 'aktiv' if tab == 'spiele' }}">Spiele</a>
+      <a href="/buecher" class="{{ 'aktiv' if tab == 'buecher' }}">Bücher</a>
+      <span class="tab-bald" title="Kommt in einem der nächsten Schritte">Was als Nächstes?</span>
+    </nav>
+  </header>
+  <main>
+    {% block inhalt %}{% endblock %}
+  </main>
+</body>
+</html>

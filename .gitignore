@@ -1,0 +1,36 @@
+# Claude
+.claude
+
+# Eigene Daten – niemals ins Repo!
+daten/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.bak
+*.csv
+*.log
+
+# Umgebungen / Geheimnisse (Steam-API-Key!)
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python-Build-Artefakte
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tests / Tools
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titel %}Buch hinzufügen · DigitalLibrary{% endblock %}
+{% block inhalt %}
+<a href="/buecher" class="zurueck">← Bücher</a>
+<h1>Buch hinzufügen</h1>
+
+<form class="box isbn-suche" hx-post="/buecher/suche" hx-target="#formular" hx-indicator="#suche-laeuft">
+  <label for="isbn">ISBN</label>
+  <div class="zeile">
+    <input id="isbn" name="isbn" inputmode="numeric" autocomplete="off" autofocus placeholder="z. B. 978-3-453-31717-8">
+    <button class="knopf primaer">Suchen</button>
+    <button type="button" class="knopf" hx-get="/buecher/formular" hx-target="#formular">Ohne ISBN eingeben</button>
+    <span id="suche-laeuft" class="htmx-indicator">Suche läuft …</span>
+  </div>
+</form>
+
+<div id="formular">
+  {% if formular or fehler %}{% include "_buch_formular.html" %}{% endif %}
+</div>
+{% endblock %}

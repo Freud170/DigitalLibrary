@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Bücher' if tab == 'buecher' else 'Spiele' }} · DigitalLibrary{% endblock %}
+{% block inhalt %}
+<div class="leiste">
+  <div class="filter">
+    <a href="/{{ tab }}" class="chip {{ 'aktiv' if not status_filter }}">Alle <span>{{ gesamt }}</span></a>
+    {% for s in STATUS_REIHENFOLGE %}
+    <a href="/{{ tab }}?status={{ s.value }}" class="chip {{ 'aktiv' if status_filter == s }}">{{ s.label }} <span>{{ anzahl[s] }}</span></a>
+    {% endfor %}
+  </div>
+  {% if tab == 'buecher' %}<a class="knopf primaer" href="/buecher/neu">+ Buch hinzufügen</a>{% endif %}
+</div>
+
+{% if medien %}
+<ul class="raster">
+  {% for m in medien %}{% include "_karte.html" %}{% endfor %}
+</ul>
+{% elif status_filter %}
+<p class="leer">Keine Einträge mit Status „{{ status_filter.label }}“.</p>
+{% elif tab == 'spiele' %}
+<p class="leer">Noch keine Spiele. Der Steam-Import kommt im nächsten Schritt.</p>
+{% else %}
+<p class="leer">Noch keine Bücher. <a href="/buecher/neu">Erstes Buch hinzufügen</a></p>
+{% endif %}
+{% endblock %}

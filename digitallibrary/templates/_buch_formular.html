@@ -1,0 +1,24 @@
+{% if fehler %}
+<p class="meldung fehler">{{ fehler }}{% if vorhanden %} <a href="/medien/{{ vorhanden.id }}">Zum Buch →</a>{% endif %}</p>
+{% endif %}
+{% if hinweis %}<p class="meldung hinweis">{{ hinweis }}</p>{% endif %}
+{% if formular %}
+<form method="post" action="/buecher" class="box formular">
+  <div class="formular-kopf">
+    {% if formular.cover_url %}<img src="{{ formular.cover_url }}" alt="Cover" class="cover-vorschau">{% endif %}
+    <div class="felder">
+      <label>Titel *<input name="titel" required maxlength="300" value="{{ formular.titel }}"></label>
+      <label>Autor(en)<input name="autoren" maxlength="500" value="{{ formular.autoren }}"></label>
+      <div class="zeile">
+        <label>ISBN<input name="isbn" maxlength="20" value="{{ formular.isbn }}"></label>
+        <label>Seiten<input name="seiten" inputmode="numeric" maxlength="6" value="{{ formular.seiten }}"></label>
+        <label>Jahr<input name="jahr" inputmode="numeric" maxlength="4" value="{{ formular.jahr }}"></label>
+      </div>
+      <label>Verlag<input name="verlag" maxlength="200" value="{{ formular.verlag }}"></label>
+      <label>Cover-URL (optional)<input name="cover_url" maxlength="500" placeholder="https://…" value="{{ formular.cover_url }}"></label>
+      <input type="hidden" name="openlibrary_key" value="{{ formular.openlibrary_key }}">
+    </div>
+  </div>
+  <div class="aktionen"><button class="knopf primaer">Speichern</button></div>
+</form>
+{% endif %}
