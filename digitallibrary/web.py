@@ -159,7 +159,32 @@ def app_erstellen(
 
     @app.get("/")
     def start() -> RedirectResponse:
-        return RedirectResponse("/buecher", status_code=303)
+        return RedirectResponse("/naechstes", status_code=303)
+
+    @app.get("/naechstes", response_class=HTMLResponse)
+    def naechstes(request: Request, s: Sitzung, art: str = "", stimmung: str = "") -> HTMLResponse:
+        art = art if art in ("spiel", "buch") else ""
+        stimmungen = bib.stimmungen_alle(s)
+        gewaehlt = next((st for st in stimmungen if str(st.id) == stimmung), None)
+        ergebnis = bib.vorschlaege(s, art or None, gewaehlt.id if gewaehlt else None)
+        return templates.TemplateResponse(
+            request,
+            "naechstes.html",
+            {
+                "tab": "naechstes",
+                "art": art,
+                "stimmungen": stimmungen,
+                "stimmung": gewaehlt,
+                "ergebnis": ergebnis,
+            },
+        )
+
+    @app.post("/naechstes/starten/{medium_id}", response_class=HTMLResponse)
+    def vorschlag_starten(request: Request, s: Sitzung, medium_id: int) -> HTMLResponse:
+        medium = medium_oder_404(s, medium_id)
+        bib.status_setzen(medium, Status.LAEUFT)
+        s.commit()
+        return templates.TemplateResponse(request, "_gestartet.html", {"m": medium})
 
     def sortierungen(tab: str) -> dict[str, str]:
         if tab == "spiele":
@@ -191,6 +216,7 @@ def app_erstellen(
                 "status_filter": filter_status,
                 "sortierung": sortierung,
                 "sortierungen": sortierungen(tab),
+                "stimmungen": bib.stimmungen_alle(s),
                 "meldung": meldung,
                 "fehler": fehler,
             },
@@ -202,10 +228,11 @@ def app_erstellen(
         return f"/{tab}" + (f"?{query}" if query else "")
 
     def geaendert_meldung(request: Request) -> str:
-        anzahl = request.query_params.get("geaendert", "")
-        if not anzahl.isdigit():
-            return ""
-        return "Keine Änderung." if anzahl == "0" else f"Status bei {anzahl} Einträgen geändert."
+        for param, text in (("geaendert", "Status"), ("stimmung_geaendert", "Stimmung")):
+            anzahl = request.query_params.get(param, "")
+            if anzahl.isdigit():
+                return "Keine Änderung." if anzahl == "0" else f"{text} bei {anzahl} Einträgen geändert."
+        return ""
 
     @app.get("/spiele", response_class=HTMLResponse)
     def spiele(request: Request, s: Sitzung, status: str | None = None, sort: str | None = None) -> HTMLResponse:
@@ -229,6 +256,27 @@ def app_erstellen(
         anzahl = bib.status_mehrere(s, ids or [], status)
         s.commit()
         return RedirectResponse(tab_url(tab, filter_status, sortierung, geaendert=anzahl), status_code=303)
+
+    @app.post("/medien/stimmung")
+    def stimmung_mehrere(
+        s: Sitzung,
+        stimmung_id: Annotated[int, Form()],
+        aktion: Annotated[str, Form()],
+        tab: Annotated[str, Form()],
+        ids: Annotated[list[int] | None, Form()] = None,
+        filter_status: Annotated[str, Form()] = "",
+        sortierung: Annotated[str, Form()] = "",
+    ) -> RedirectResponse:
+        if tab not in TABS or aktion not in ("hinzufuegen", "entfernen"):
+            raise HTTPException(422, "Ungültige Anfrage")
+        try:
+            anzahl = bib.stimmung_mehrere(s, ids or [], stimmung_id, hinzufuegen=aktion == "hinzufuegen")
+        except bib.Eingabefehler as fehler:
+            raise HTTPException(422, str(fehler)) from None
+        s.commit()
+        return RedirectResponse(
+            tab_url(tab, filter_status, sortierung, stimmung_geaendert=anzahl), status_code=303
+        )
 
     @app.post("/spiele/steam-import", response_class=HTMLResponse)
     def steam_import(request: Request, s: Sitzung) -> HTMLResponse:

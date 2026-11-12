@@ -54,12 +54,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 1rem 16px 3rem; }
 }
 .marke { font-weight: 700; color: var(--text); text-decoration: none; }
 .tabs { display: flex; gap: .25rem; }
-.tabs a, .tab-bald {
+.tabs a {
   padding: .4rem .9rem; border-radius: 999px; text-decoration: none; color: var(--gedaempft);
 }
 .tabs a:hover { background: var(--hg); color: var(--text); }
 .tabs a.aktiv { background: var(--akzent); color: var(--akzent-text); }
-.tab-bald { opacity: .5; cursor: default; }
 
 /* Leiste mit Filtern */
 .leiste { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -124,6 +123,47 @@ main { max-width: 1100px; margin: 0 auto; padding: 1rem 16px 3rem; }
   box-shadow: 0 6px 24px rgb(0 0 0 / .18);
 }
 .auswahl-leiste[hidden] { display: none; }
+.auswahl-leiste .gruppe { display: flex; gap: .4rem; align-items: center; padding-left: .75rem; border-left: 1px solid var(--rand); }
+
+/* Was als Nächstes? */
+h2 { font-size: 1.1rem; margin: 1.5rem 0 .6rem; }
+.auswahl-naechstes { display: flex; gap: 1.25rem; align-items: flex-end; flex-wrap: wrap; }
+.umschalter { border: 0; padding: 0; margin: 0; display: flex; gap: 0; }
+.umschalter legend { margin-bottom: .2rem; padding: 0; }
+.umschalter label { cursor: pointer; }
+.umschalter input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.umschalter span { display: block; padding: .4rem .9rem; border: 1px solid var(--rand); background: var(--hg); }
+.umschalter label:first-of-type span { border-radius: 8px 0 0 8px; }
+.umschalter label:last-of-type span { border-radius: 0 8px 8px 0; }
+.umschalter label + label span { border-left: 0; }
+.umschalter input:checked + span { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-text); font-weight: 600; }
+.umschalter input:focus-visible + span { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.stimmung-wahl { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; color: var(--gedaempft); }
+.stimmung-wahl select { width: auto; min-width: 160px; }
+
+.weitermachen { list-style: none; padding: 0; margin: 0; display: flex; gap: .75rem; flex-wrap: wrap; }
+.mini {
+  display: flex; gap: .6rem; align-items: center; padding: .5rem .75rem .5rem .5rem; background: var(--flaeche);
+  border: 1px solid var(--rand); border-left: 3px solid var(--s-laeuft); border-radius: var(--radius);
+  text-decoration: none; color: var(--text); max-width: 360px;
+}
+.mini img, .mini .cover-leer { width: 36px; height: 54px; border-radius: 4px; object-fit: cover; flex: none; }
+.mini .cover-leer { font-size: 1rem; }
+.mini span { display: flex; flex-direction: column; min-width: 0; }
+.mini small { color: var(--gedaempft); }
+
+.vorschlaege { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.vorschlag {
+  display: flex; flex-direction: column; background: var(--flaeche); border: 1px solid var(--rand);
+  border-radius: var(--radius); overflow: hidden;
+}
+.vorschlag-cover img, .vorschlag-cover .cover-leer { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; display: block; }
+.vorschlag-cover .cover-leer { display: flex; font-size: 3rem; border-radius: 0; height: auto; }
+.vorschlag-text { display: flex; flex-direction: column; gap: .3rem; padding: .85rem; flex: 1; }
+.vorschlag-text .knopf { margin-top: auto; align-self: stretch; text-align: center; }
+.vorschlag .art { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--gedaempft); }
+.vorschlag.gestartet { border-color: var(--s-laeuft); justify-content: center; min-height: 200px; }
+.vorschlag.gestartet .art { color: var(--s-laeuft); font-weight: 700; }
 .auswahl-leiste label { display: flex; align-items: center; gap: .4rem; font-size: .9rem; }
 .auswahl-leiste select { width: auto; }
 

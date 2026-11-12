@@ -1,10 +1,11 @@
 """Fachlogik: Medien anlegen, ändern, auflisten. Unabhängig von der Weboberfläche."""
 
 import datetime as dt
+import random
 from dataclasses import dataclass
 
 from sqlalchemy import case, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from . import steam
 from .models import STATUS_REIHENFOLGE, Buch, Fortschritt, Medium, Spiel, Status, Stimmung
@@ -43,7 +44,8 @@ SORTIERUNGEN = {"status": "Status", "titel": "Titel", "spielzeit": "Spielzeit", 
 def medien_liste(
     sitzung: Session, klasse: type[Medium], status: Status | None = None, sortierung: str = "status"
 ) -> list[Medium]:
-    abfrage = select(klasse)
+    # Stimmungen gesammelt in einer Abfrage laden statt einzeln pro Karte
+    abfrage = select(klasse).options(selectinload(klasse.stimmungen))
     if status is not None:
         abfrage = abfrage.where(klasse.status == status)
     titel = func.lower(klasse.titel)
@@ -159,6 +161,74 @@ def stimmung_anlegen(sitzung: Session, name: str) -> Stimmung:
 
 def medium_holen(sitzung: Session, medium_id: int) -> Medium | None:
     return sitzung.get(Medium, medium_id)
+
+
+def stimmung_mehrere(sitzung: Session, ids: list[int], stimmung_id: int, hinzufuegen: bool) -> int:
+    """Fügt eine Stimmung mehreren Medien hinzu bzw. entfernt sie. Gibt die Anzahl der geänderten zurück."""
+    stimmung = sitzung.get(Stimmung, stimmung_id)
+    if stimmung is None:
+        raise Eingabefehler("Diese Stimmung gibt es nicht.")
+    if not ids:
+        return 0
+    geaendert = 0
+    for medium in sitzung.scalars(select(Medium).where(Medium.id.in_(ids))):
+        hat = stimmung in medium.stimmungen
+        if hinzufuegen and not hat:
+            medium.stimmungen.append(stimmung)
+            geaendert += 1
+        elif not hinzufuegen and hat:
+            medium.stimmungen.remove(stimmung)
+            geaendert += 1
+    sitzung.flush()
+    return geaendert
+
+
+# --- Was als Nächstes? -----------------------------------------------------------
+
+
+@dataclass
+class Vorschlaege:
+    weitermachen: list[Medium]
+    neu: list[Medium]
+    kandidaten: int  # so viele Backlog-Einträge passten zur Auswahl
+
+
+def gewicht(medium: Medium, jetzt: dt.datetime) -> float:
+    """Länger Wartendes kommt häufiger dran: 1 + 1 pro 30 Tage im Backlog, höchstens 13."""
+    tage = max((jetzt - medium.hinzugefuegt_am).days, 0)
+    return 1 + min(tage, 360) / 30
+
+
+def vorschlaege(
+    sitzung: Session,
+    art: str | None = None,
+    stimmung_id: int | None = None,
+    anzahl: int = 3,
+    zufall: random.Random | None = None,
+    jetzt: dt.datetime | None = None,
+) -> Vorschlaege:
+    zufall = zufall or random.Random()  # noqa: S311 - kein Krypto-Zweck
+    jetzt = jetzt or dt.datetime.now()
+
+    def abfrage(status: Status):
+        q = select(Medium).options(selectinload(Medium.stimmungen)).where(Medium.status == status)
+        if art:
+            q = q.where(Medium.art == art)
+        if stimmung_id is not None:
+            q = q.where(Medium.stimmungen.any(Stimmung.id == stimmung_id))
+        return q
+
+    weitermachen = list(
+        sitzung.scalars(abfrage(Status.LAEUFT).order_by(Medium.geaendert_am.desc(), func.lower(Medium.titel)))
+    )
+    # Feste Reihenfolge vor dem Ziehen, damit Tests mit festem Startwert reproduzierbar sind
+    topf = list(sitzung.scalars(abfrage(Status.BACKLOG).order_by(Medium.id)))
+    kandidaten = len(topf)
+    gezogen: list[Medium] = []
+    while topf and len(gezogen) < anzahl:
+        wahl = zufall.choices(range(len(topf)), weights=[gewicht(m, jetzt) for m in topf])[0]
+        gezogen.append(topf.pop(wahl))
+    return Vorschlaege(weitermachen=weitermachen, neu=gezogen, kandidaten=kandidaten)
 
 
 # --- Steam -------------------------------------------------------------------

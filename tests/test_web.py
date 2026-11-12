@@ -23,10 +23,10 @@ def _buch_speichern(client, **aenderungen) -> int:
     return int(antwort.headers["location"].rsplit("/", 1)[1])
 
 
-def test_start_leitet_auf_buecher(client):
+def test_start_leitet_auf_was_als_naechstes(client):
     antwort = client.get("/")
     assert antwort.status_code == 303
-    assert antwort.headers["location"] == "/buecher"
+    assert antwort.headers["location"] == "/naechstes"
 
 
 def test_leere_listen(client):

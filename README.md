@@ -5,6 +5,10 @@ Nächstes?“ schneller beantwortet ist. Läuft lokal im Browser.
 
 ## Stand
 
+- **Was als Nächstes?** (Startseite): Spiel / Buch / egal und eine Stimmung wählen →
+  oben „Weitermachen“ (was gerade läuft), darunter 3 zufällige Vorschläge aus dem Backlog.
+  Länger Wartendes kommt häufiger dran. „Jetzt starten“ setzt den Eintrag auf „Läuft“.
+  Mit Stimmung werden nur Einträge mit genau dieser Stimmung vorgeschlagen.
 - **Bücher:** per ISBN hinzufügen (Daten und Cover von der Open Library, vor dem Speichern
   prüfbar) oder von Hand ohne ISBN.
 - **Status** pro Medium (Backlog / Läuft / Beendet / Abgebrochen), Bewertung 1–10, Notiz,
@@ -15,8 +19,8 @@ Nächstes?“ schneller beantwortet ist. Läuft lokal im Browser.
   Voraussetzung: `STEAM_API_KEY` und `STEAM_ID` in der `.env`, Spieldetails im Profil öffentlich.
 - Listen: Suche (Titel/Autor), Sortierung (Status, Titel; bei Spielen auch Spielzeit und
   zuletzt gespielt) und **Mehrfachauswahl**: Karten anhaken oder „Alle sichtbaren auswählen“,
-  dann unten in der Leiste den Status für alle auf einmal setzen.
-- Geplant: „Was als Nächstes?“-Modus, Spielzeit- und Lese-Verlauf, Jahresstatistik.
+  dann unten in der Leiste den Status setzen oder eine Stimmung hinzufügen/entfernen.
+- Geplant: Spielzeit- und Lese-Verlauf, Jahresstatistik.
 
 ## Einrichten (Windows, PowerShell)
 

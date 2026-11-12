@@ -45,12 +45,25 @@
   <input type="hidden" name="filter_status" value="{{ status_filter.value if status_filter else '' }}">
   <input type="hidden" name="sortierung" value="{{ sortierung }}">
   <strong class="auswahl-anzahl">0 ausgewählt</strong>
-  <label>Status setzen auf
-    <select name="neuer_status">
-      {% for s in STATUS_REIHENFOLGE %}<option value="{{ s.value }}" {{ 'selected' if s == Status.BEENDET }}>{{ s.label }}</option>{% endfor %}
-    </select>
-  </label>
-  <button class="knopf primaer">Übernehmen</button>
+  <span class="gruppe">
+    <label>Status
+      <select name="neuer_status">
+        {% for s in STATUS_REIHENFOLGE %}<option value="{{ s.value }}" {{ 'selected' if s == Status.BEENDET }}>{{ s.label }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="knopf primaer">Setzen</button>
+  </span>
+  {% if stimmungen %}
+  <span class="gruppe">
+    <label>Stimmung
+      <select name="stimmung_id">
+        {% for st in stimmungen %}<option value="{{ st.id }}">{{ st.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="knopf" formaction="/medien/stimmung" name="aktion" value="hinzufuegen">Hinzufügen</button>
+    <button class="knopf" formaction="/medien/stimmung" name="aktion" value="entfernen">Entfernen</button>
+  </span>
+  {% endif %}
   <button type="button" class="knopf" data-auswahl-leeren>Auswahl aufheben</button>
 </form>
 {% elif status_filter %}

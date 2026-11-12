@@ -132,7 +132,8 @@ class Spiel(Medium):
     spielzeit_min: Mapped[int] = mapped_column(default=0)
     zuletzt_gespielt: Mapped[dt.datetime | None]
 
-    __mapper_args__ = {"polymorphic_identity": Art.SPIEL.value}  # noqa: RUF012
+    # inline: bei Abfragen über Medium werden die Spiel-Spalten gleich mitgeladen
+    __mapper_args__ = {"polymorphic_identity": Art.SPIEL.value, "polymorphic_load": "inline"}  # noqa: RUF012
 
     @property
     def cover_ersatz_url(self) -> str | None:
@@ -161,7 +162,7 @@ class Buch(Medium):
     aktuelle_seite: Mapped[int | None]
     openlibrary_key: Mapped[str | None] = mapped_column(String(50))
 
-    __mapper_args__ = {"polymorphic_identity": Art.BUCH.value}  # noqa: RUF012
+    __mapper_args__ = {"polymorphic_identity": Art.BUCH.value, "polymorphic_load": "inline"}  # noqa: RUF012
 
     @property
     def geschaetzte_dauer_min(self) -> int | None:
